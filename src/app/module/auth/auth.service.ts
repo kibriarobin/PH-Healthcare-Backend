@@ -1,13 +1,20 @@
 import bcrypt from "bcryptjs";
+import path from "path";
 import type { JwtPayload, SignOptions } from "jsonwebtoken";
+import { googleClient } from "../../lib/googleAuth";
+import type { TokenPayload } from "google-auth-library";
+import crypto from "crypto";
+import { redisClient } from "../../lib/redis";
+import { transporter } from "../../lib/nodemailer";
+import config from "../../config";
+import { prisma } from "../../lib/prisma";
+import { jwtUtils } from "../../utils/jwt";
+import ejs from "ejs";
 import {
   AuthProvider,
   Role,
   UserStatus,
 } from "../../../generated/prisma/enums";
-import config from "../../config";
-import { prisma } from "../../lib/prisma";
-import { jwtUtils } from "../../utils/jwt";
 import type {
   IForgotPassword,
   IGoogleLoginPayload,
@@ -16,10 +23,6 @@ import type {
   IRequestUser,
   IResetPassword,
 } from "./auth.interface";
-import { googleClient } from "../../lib/googleAuth";
-import type { TokenPayload } from "google-auth-library";
-import crypto from "crypto";
-import { redisClient } from "../../lib/redis";
 
 const registerPatient = async (payload: IRegisterPatientPayload) => {
   const { name, password } = payload;
@@ -369,11 +372,34 @@ const forgotPassword = async (payload: IForgotPassword) => {
 
   const key = `forgot-password-otp:${isUserExist.email}`;
 
+  const expirationSeconds = 5 * 60;
+
   await redisClient.set(key, otp, {
     expiration: {
       type: "EX",
-      value: 5 * 60,
+      value: expirationSeconds,
     },
+  });
+
+  const templateFilePath = path.join(
+    process.cwd(),
+    "src/app/templates/forgot-password.ejs",
+  );
+
+  const templateData =  {
+    name: isUserExist.name,
+    otp,
+    expirationMinutes: expirationSeconds / 60,
+  }
+
+  const html = await ejs.renderFile(templateFilePath, templateData);
+
+  await transporter.sendMail({
+    from: config.email_sender,
+    to: isUserExist.email,
+    subject: "Forgot password OTP",
+    // text: `Your OTP is: ${otp}`
+    html,
   });
 };
 
@@ -432,7 +458,27 @@ const resetPassword = async (payload: IResetPassword) => {
     },
   });
 
-  await redisClient.del([key])
+  await redisClient.del([key]);
+
+  const templateFilePath = path.join(
+    process.cwd(),
+    "src/app/templates/reset-password-success.ejs",
+  );
+
+  const templateData = {
+    name: isUserExist.name,
+  };
+
+  const html = await ejs.renderFile(templateFilePath, templateData);
+
+  await transporter.sendMail({
+    from: config.email_sender,
+    to: isUserExist.email,
+    subject: "Password changed",
+    // text: `Your OTP is: ${otp}`
+    // html: `<h1>Your password is changed</h1>`,
+    html,
+  });
 };
 
 export const AuthService = {

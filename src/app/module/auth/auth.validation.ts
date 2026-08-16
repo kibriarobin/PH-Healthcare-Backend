@@ -16,6 +16,10 @@ const PatientZodRegisterSchema = z.object({
       "Password must contain at least one special character",
     ),
 });
+const PatientEmailVerifyZodSchema = z.object({
+  email: z.email("Invalid email address"),
+  otp: z.string().length(6),
+});
 
 const PatientZodLoginSchema = z.object({
   email: z.email("Invalid email address"),
@@ -52,6 +56,7 @@ const ResetPasswordZodSchema = z.object({
 
 export const userValidation = {
   PatientZodRegisterSchema,
+  PatientEmailVerifyZodSchema,
   PatientZodLoginSchema,
   ForgotPasswordZodSchema,
   ResetPasswordZodSchema,

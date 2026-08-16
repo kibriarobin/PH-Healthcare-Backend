@@ -22,10 +22,11 @@ import type {
   IRegisterPatientPayload,
   IRequestUser,
   IResetPassword,
+  IVerifyEmailPayload,
 } from "./auth.interface";
 
 const registerPatient = async (payload: IRegisterPatientPayload) => {
-  const { name, password } = payload;
+  const { name, password, patient: patientData } = payload;
   const email = payload.email.trim().toLowerCase();
 
   const isUserExists = await prisma.user.findUnique({
@@ -41,16 +42,117 @@ const registerPatient = async (payload: IRegisterPatientPayload) => {
     Number(config.bcrypt_salt_rounds),
   );
 
+  const expirationSeconds = 5 * 60;
+
+  const otpKey = `patient-registration-otp:${email}`;
+  const otpValue = crypto.randomInt(100000, 1000000).toString();
+
+  await redisClient.set(otpKey, otpValue, {
+    expiration: {
+      type: "EX",
+      value: expirationSeconds,
+    },
+  });
+
+  const patientRegistrationKey = `patient-registration-data:${email}`;
+  const redisUserDataPayload = {
+    name,
+    email,
+    password: hashedPassword,
+    patient: patientData,
+  };
+
+  await redisClient.set(
+    patientRegistrationKey,
+    JSON.stringify(redisUserDataPayload),
+    {
+      expiration: {
+        type: "EX",
+        value: expirationSeconds,
+      },
+    },
+  );
+
+  const templateFilePath = path.join(
+    process.cwd(),
+    "src/app/templates/user-registration.ejs",
+  );
+
+  const templateData = {
+    name,
+    email,
+    otpValue,
+    expirationMinutes: expirationSeconds / 60,
+  };
+
+  const html = await ejs.renderFile(templateFilePath, templateData);
+
+  await transporter.sendMail({
+    from: config.email_sender,
+    to: email,
+    subject: "Verify Your Email - PH Healthcare",
+    // text: `Your OTP is: ${otp}`
+    html,
+  });
+};
+
+const verifyPatientEmail = async (payload: IVerifyEmailPayload) => {
+  const email = payload.email.trim().toLowerCase();
+  const otp = payload.otp;
+
+  const isUserExist = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (isUserExist?.emailVerified) {
+    throw new Error("This email already verified");
+  }
+
+  if (isUserExist?.status === "BLOCKED") {
+    throw new Error("User account is blocked");
+  }
+
+  if (isUserExist?.isDeleted || isUserExist?.status === "DELETED") {
+    throw new Error("User is deleted");
+  }
+
+  const otpKey = `patient-registration-otp:${email}`;
+
+  const redisOtp = await redisClient.get(otpKey);
+
+  if (!redisOtp) {
+    throw new Error("Invalid OTP");
+  }
+
+  if (redisOtp !== otp) {
+    throw new Error("OTP does not match");
+  }
+
+  await redisClient.del(otpKey);
+
+  const patientRegistrationKey = `patient-registration-data:${email}`;
+  const redisPatientData = await redisClient.get(patientRegistrationKey);
+
+  if (!redisPatientData) {
+    throw new Error("Patient does not exists");
+  }
+
+  const patientPayload: IRegisterPatientPayload = JSON.parse(redisPatientData);
+
   const createdUser = await prisma.user.create({
     data: {
-      name,
-      email,
-      password: hashedPassword,
+      name: patientPayload.name,
+      email: patientPayload.email,
+      password: patientPayload.password,
       role: Role.PATIENT,
       status: UserStatus.ACTIVE,
-      emailVerified: false,
+      emailVerified: true,
       patient: {
-        create: { name, email },
+        create: {
+          name: patientPayload.name,
+          email: patientPayload.email,
+          contactNumber: patientPayload?.patient?.contactNumber || "",
+        },
       },
     },
     omit: { password: true },
@@ -386,11 +488,11 @@ const forgotPassword = async (payload: IForgotPassword) => {
     "src/app/templates/forgot-password.ejs",
   );
 
-  const templateData =  {
+  const templateData = {
     name: isUserExist.name,
     otp,
     expirationMinutes: expirationSeconds / 60,
-  }
+  };
 
   const html = await ejs.renderFile(templateFilePath, templateData);
 
@@ -483,6 +585,7 @@ const resetPassword = async (payload: IResetPassword) => {
 
 export const AuthService = {
   registerPatient,
+  verifyPatientEmail,
   loginUser,
   getMe,
   refreshToken,

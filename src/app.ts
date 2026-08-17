@@ -11,8 +11,9 @@ import config from "./app/config";
 import { globalErrorHandler } from "./app/middleware/globalErrorHandler";
 import { notFound } from "./app/middleware/notFound";
 import { AuthRoutes } from "./app/module/auth/auth.route";
-import { redisClient } from "./app/lib/redis";
-import crypto from "crypto"
+// import { redisClient } from "./app/lib/redis";
+import crypto from "crypto";
+import { UserRoutes } from "./app/module/user/user.route";
 
 const app: Application = express();
 
@@ -32,28 +33,29 @@ app.use(cookieParser());
 
 app.use("/api/auth", AuthRoutes);
 
-app.get("/test", async(req: Request, res: Response, next: NextFunction)=> {
-    try {
+app.use("/api/user", UserRoutes);
 
-      const otp = crypto.randomInt(100000, 1000000)
+app.get("/test", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const otp = crypto.randomInt(100000, 1000000);
 
-      // await redisClient.set("forgot-password-otp:patient1@gmail.com", 123456, {
-      //   expiration: {
-      //     type: "EX",
-      //     value: 60
-      //   }
-      // })
+    // await redisClient.set("forgot-password-otp:patient1@gmail.com", 123456, {
+    //   expiration: {
+    //     type: "EX",
+    //     value: 60
+    //   }
+    // })
 
-      res.status(httpStatus.OK).json({
-        success: true,
-        message: "Redis success",
-        data: otp
-      })
-    } catch (error) {
-      console.log(error);
-      next(error)
-    }
-})
+    res.status(httpStatus.OK).json({
+      success: true,
+      message: "Redis success",
+      data: otp,
+    });
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+});
 
 // Basic route
 app.get("/", async (req: Request, res: Response) => {

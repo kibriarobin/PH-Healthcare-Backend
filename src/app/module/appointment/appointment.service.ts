@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: <explanation> */
 import config from "../../config";
 import { getBKashIdToken } from "../../lib/bkash";
 

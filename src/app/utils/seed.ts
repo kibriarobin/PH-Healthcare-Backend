@@ -120,7 +120,7 @@ export const seedTesterDoctor = async () => {
 
     const name = config.tester_doctor_name;
     const email = config.tester_doctor_email;
-    const password= config.tester_doctor_password
+    const password = config.tester_doctor_password;
 
     if (!name || !email || !password) {
       throw new Error(
@@ -134,19 +134,27 @@ export const seedTesterDoctor = async () => {
     );
 
     const testerDoctor = await prisma.user.create({
-        data:{
-            name,
+      data: {
+        name,
+        email,
+        password: hashPassword,
+        role: Role.DOCTOR,
+        needPasswordChange: false,
+        emailVerified: true,
+        doctor: {
+          create: {
             email,
-            password: hashPassword,
-            role: Role.DOCTOR,
-            needPasswordChange: false,
-            emailVerified: true
-        }
-    })
+            name,
+            experienceYears: 5,
+            licenseNumber: "BMDC12345",
+            qualifications: "MBBs",
+            specialization: "medicine",
+          },
+        },
+      },
+    });
 
-    console.log("Tester doctor created successfully", testerDoctor)
-
-
+    console.log("Tester doctor created successfully", testerDoctor);
   } catch (error) {
     console.error("Error creating tester doctor:", error);
   }

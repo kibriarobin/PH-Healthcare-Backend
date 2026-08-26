@@ -1,91 +1,70 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Doctor Application Update</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Application Update</title>
 </head>
+<body style="margin:0; padding:0; background-color:#f4f6f8; font-family:Arial, Helvetica, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f8; padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
 
-<body style="margin: 0; padding: 0; background-color: #f5f7fa; font-family: Arial, Helvetica, sans-serif;">
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#0f766e; padding:24px 32px;">
+              <h1 style="margin:0; color:#ffffff; font-size:20px; font-weight:600;">PH Healthcare</h1>
+            </td>
+          </tr>
 
-  <div style="max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 10px; overflow: hidden;">
+          <!-- Body -->
+          <tr>
+            <td style="padding:32px;">
+              <h2 style="margin:0 0 16px 0; color:#1f2937; font-size:20px; font-weight:600; text-align:center;">
+                Application Update
+              </h2>
+              <p style="margin:0 0 16px 0; color:#1f2937; font-size:16px; line-height:24px;">
+                Dear Dr. <%= doctorName %>,
+              </p>
+              <p style="margin:0 0 24px 0; color:#1f2937; font-size:16px; line-height:24px;">
+                Thank you for your interest in joining PH Healthcare as a <strong><%= specialization %></strong> specialist. After careful review, we regret to inform you that your application has not been approved at this time.
+              </p>
 
-    <!-- Header -->
-    <div style="background-color: #2563eb; padding: 25px; text-align: center;">
-      <h1 style="margin: 0; color: #ffffff;">
-        PH Healthcare
-      </h1>
-    </div>
+              <!-- Reason box -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background-color:#fef2f2; border-left:3px solid #dc2626; border-radius:4px; padding:16px 20px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="color:#6b7280; font-size:13px; padding-bottom:4px;">Reason</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#1f2937; font-size:15px; line-height:22px;"><%= rejectionReason %></td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
 
-    <!-- Content -->
-    <div style="padding: 30px;">
+              <p style="margin:24px 0 0 0; color:#6b7280; font-size:14px; line-height:22px;">
+                If you believe this decision was made in error or you would like to reapply with updated information, please feel free to submit a new application or contact our support team.
+              </p>
+            </td>
+          </tr>
 
-      <h2 style="color: #1f2937;">
-        Hello, <%= doctorName %>
-      </h2>
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f9fafb; padding:20px 32px; text-align:center; border-top:1px solid #e5e7eb;">
+              <p style="margin:0; color:#9ca3af; font-size:12px; line-height:18px;">
+                &copy; <%= new Date().getFullYear() %> PH Healthcare. All rights reserved.
+              </p>
+            </td>
+          </tr>
 
-      <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
-        Thank you for your interest in joining
-        <strong>PH Healthcare</strong> as a doctor.
-      </p>
-
-      <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
-        After carefully reviewing your application, we regret to inform you
-        that your doctor application has not been approved at this time.
-      </p>
-
-      <!-- Application Info -->
-      <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-
-        <p style="margin: 8px 0;">
-          <strong>Name:</strong> <%= doctorName %>
-        </p>
-
-        <p style="margin: 8px 0;">
-          <strong>Email:</strong> <%= doctorEmail %>
-        </p>
-
-        <% if (specialization) { %>
-          <p style="margin: 8px 0;">
-            <strong>Specialization:</strong> <%= specialization %>
-          </p>
-        <% } %>
-
-      </div>
-
-      <% if (rejectionReason) { %>
-        <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0;">
-          <p style="margin: 0 0 8px; color: #991b1b;">
-            <strong>Reason for Rejection</strong>
-          </p>
-
-          <p style="margin: 0; color: #4b5563; line-height: 1.6;">
-            <%= rejectionReason %>
-          </p>
-        </div>
-      <% } %>
-
-      <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">
-        We appreciate your time and effort in submitting your application.
-        You may review the requirements and apply again in the future if
-        eligible.
-      </p>
-
-      <p style="color: #374151; margin-top: 25px; line-height: 1.6;">
-        Best regards,<br />
-        <strong>PH Healthcare Team</strong>
-      </p>
-
-    </div>
-
-    <!-- Footer -->
-    <div style="background-color: #f9fafb; padding: 15px; text-align: center;">
-      <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-        © <%= new Date().getFullYear() %> PH Healthcare
-      </p>
-    </div>
-
-  </div>
-
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>

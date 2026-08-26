@@ -70,8 +70,20 @@ const approveDoctor = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getAllDoctors = catchAsync(async (req: Request, res: Response) => {
+  const { data, meta } = await DoctorService.getAllDoctors(req.query);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Retrieved all doctors successfully",
+    data: data,
+    meta: meta,
+  });
+});
+
 export const DoctorController = {
   applyDoctor,
   verifyDoctorEmail,
   approveDoctor,
+  getAllDoctors,
 };

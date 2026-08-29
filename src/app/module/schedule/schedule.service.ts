@@ -322,7 +322,84 @@ const updateSchedule = async (
     },
   });
 
-  return updatedSchedule
+  return updatedSchedule;
+};
+
+const publishedSchedule = async (scheduleId: string, user: RequestUser) => {
+  const doctor = await prisma.doctor.findUnique({
+    where: {
+      userId: user.userId,
+    },
+  });
+
+  if (!doctor) {
+    throw new Error("Doctor not found");
+  }
+
+  const schedule = await prisma.schedule.findUnique({
+    where: {
+      id: scheduleId,
+      doctorId: doctor.id,
+    },
+  });
+
+  if (!schedule || schedule.isDeleted) {
+    throw new Error("Schedule not found");
+  }
+
+  if (schedule.status === ScheduleStatus.PUBLISHED) {
+    throw new Error("This Schedule already published");
+  }
+
+  const publishedSchedule = await prisma.schedule.update({
+    where: {
+      id: schedule.id,
+    },
+    data: {
+      status: ScheduleStatus.PUBLISHED,
+    },
+  });
+
+  return publishedSchedule;
+};
+
+const deleteSchedule = async (scheduleId: string, user: RequestUser) => {
+  const doctor = await prisma.doctor.findUnique({
+    where: {
+      userId: user.userId,
+    },
+  });
+
+  if (!doctor) {
+    throw new Error("Doctor not found");
+  }
+
+  const schedule = await prisma.schedule.findUnique({
+    where: {
+      id: scheduleId,
+      doctorId: doctor.id,
+    },
+  });
+
+  if (!schedule || schedule.isDeleted) {
+    throw new Error("Schedule not found");
+  }
+
+  if (
+    schedule.status === ScheduleStatus.PUBLISHED &&
+    schedule.totalSlots !== schedule.availableSlots
+  ) {
+    throw new Error(
+      "Schedule once published and appointment booked cannot be deleted",
+    );
+  }
+
+  const deletedSchedule = await prisma.schedule.update({
+    where: { id: schedule.id },
+    data: { isDeleted: true, deletedAt: new Date() },
+  });
+
+  return deletedSchedule;
 };
 
 export const ScheduleService = {
@@ -331,4 +408,6 @@ export const ScheduleService = {
   getAllSchedule,
   getScheduleById,
   updateSchedule,
+  publishedSchedule,
+  deleteSchedule,
 };

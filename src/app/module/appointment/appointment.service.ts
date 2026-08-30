@@ -1,4 +1,4 @@
-import { isAfter, isBefore, isSameDay } from "date-fns";
+import { addMinutes, format, isBefore, isSameDay } from "date-fns";
 import {
   AppointmentStatus,
   PaymentStatus,
@@ -9,6 +9,9 @@ import { getBKashIdToken } from "../../lib/bkash";
 import { prisma } from "../../lib/prisma";
 import type { RequestUser } from "../../middleware/checkAuth";
 import type { IBookAppointmentPayload } from "./appointment.interface";
+import { transporter } from "../../lib/nodemailer";
+import path from "path";
+import ejs from "ejs";
 
 const bookAppointment = async (
   payload: IBookAppointmentPayload,
@@ -268,15 +271,50 @@ const bookAppointmentCallback = async (query: Record<string, any>) => {
     const executedPaymentResult = await executedPaymentResponse.json();
 
     if (paymentStatus === "success") {
+      const appointment = await prisma.appointment.findUnique({
+        where: {
+          id: executedPaymentResult.merchantInvoiceNumber,
+        },
+        include: {
+          schedule: true,
+          patient: true,
+          doctor: true,
+        },
+      });
+
+      if (!appointment) {
+        throw new Error("Appointment not found");
+      }
+
+      const newAvailableSlots = appointment.schedule.availableSlots - 1;
+
+      const alreadyBookedSlots =
+        appointment.schedule.totalSlots - appointment.schedule.availableSlots;
+
+      const serialNumber = alreadyBookedSlots + 1;
+
+      const joiningTime = addMinutes(
+        appointment.schedule.startDateTime,
+        (serialNumber - 1) * 20,
+      );
+
       await tx.appointment.update({
         where: {
           id: executedPaymentResult.merchantInvoiceNumber,
         },
         data: {
           status: AppointmentStatus.CONFIRMED,
+          joiningTime,
+          serialNumber,
         },
       });
 
+      await tx.schedule.update({
+        where: { id: appointment.scheduleId },
+        data: {
+          availableSlots: newAvailableSlots,
+        },
+      });
       await tx.payment.update({
         where: {
           appointmentId: executedPaymentResult.merchantInvoiceNumber,
@@ -288,6 +326,27 @@ const bookAppointmentCallback = async (query: Record<string, any>) => {
           paidAt: executedPaymentResult.paymentExecuteTime,
           gateWayResponse: executedPaymentResult,
         },
+      });
+
+      const templateFilePath = path.join(
+        process.cwd(),
+        "src/app/templates/appointment-confirmation.ejs",
+      );
+
+      const templateData = {
+        patientName: appointment.patient.name,
+        doctorName: appointment.doctor.name,
+        appointmentDate: format(joiningTime, "dd MMM yyyy"),
+        appointmentTime: format(joiningTime, "hh:mm a"),
+      };
+
+      const html = await ejs.renderFile(templateFilePath, templateData);
+
+      await transporter.sendMail({
+        from: config.email_sender,
+        to: appointment.patient.email,
+        subject: "Your Appointment is Confirmed - PH Healthcare",
+        html,
       });
 
       return {

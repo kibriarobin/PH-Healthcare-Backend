@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Appointment Confirmed</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f6f8; font-family:Arial, Helvetica, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f8; padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#0f766e; padding:24px 32px;">
+              <h1 style="margin:0; color:#ffffff; font-size:20px; font-weight:600;">PH Healthcare</h1>
+            </td>
+          </tr>
+
+          <!-- Success icon -->
+          <tr>
+            <td align="center" style="padding:32px 32px 0 32px;">
+              <div style="width:64px; height:64px; background-color:#f0fdfa; border-radius:50%; display:inline-block; line-height:64px; text-align:center;">
+                <span style="font-size:32px; color:#0f766e;">&#10003;</span>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:24px 32px 32px 32px;">
+              <h2 style="margin:0 0 16px 0; color:#1f2937; font-size:20px; font-weight:600; text-align:center;">
+                Appointment Confirmed
+              </h2>
+              <p style="margin:0 0 24px 0; color:#1f2937; font-size:16px; line-height:24px; text-align:center;">
+                Hi <strong><%= patientName %></strong>, your payment was successful and your appointment is now confirmed.
+              </p>
+
+              <!-- Appointment details box -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background-color:#f9fafb; border-radius:8px; padding:20px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding-bottom:12px;">
+                          <span style="color:#6b7280; font-size:13px;">Doctor</span><br />
+                          <span style="color:#1f2937; font-size:16px; font-weight:600;">Dr. <%= doctorName %></span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding-bottom:12px;">
+                          <span style="color:#6b7280; font-size:13px;">Date</span><br />
+                          <span style="color:#1f2937; font-size:16px; font-weight:600;"><%= appointmentDate %></span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <span style="color:#6b7280; font-size:13px;">Time</span><br />
+                          <span style="color:#1f2937; font-size:16px; font-weight:600;"><%= appointmentTime %></span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:24px 0 0 0; color:#6b7280; font-size:14px; line-height:22px; text-align:center;">
+                Please be ready a few minutes before your scheduled time.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f9fafb; padding:20px 32px; text-align:center; border-top:1px solid #e5e7eb;">
+              <p style="margin:0; color:#9ca3af; font-size:12px; line-height:18px;">
+                &copy; <%= new Date().getFullYear() %> PH Healthcare. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

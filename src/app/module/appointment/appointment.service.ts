@@ -12,6 +12,7 @@ import type { IBookAppointmentPayload } from "./appointment.interface";
 import { transporter } from "../../lib/nodemailer";
 import path from "path";
 import ejs from "ejs";
+import PDFDocument from "pdfkit";
 
 const bookAppointment = async (
   payload: IBookAppointmentPayload,
@@ -328,6 +329,51 @@ const bookAppointmentCallback = async (query: Record<string, any>) => {
         },
       });
 
+      const pdfDocument = new PDFDocument({ margin: 50 });
+
+      const pdfChunks: Buffer[] = [];
+
+      pdfDocument.on("data", (chunk) => {
+        pdfChunks.push(chunk);
+      });
+
+      const pdfReadyPromise = new Promise<Buffer>((resolve) => {
+        pdfDocument.on("end", () => {
+          resolve(Buffer.concat(pdfChunks));
+        });
+      });
+
+      pdfDocument.fontSize(20).text("PH-healthcare", { align: "center" });
+      pdfDocument.fontSize(14).text("Appointment Invoice", { align: "center" });
+      pdfDocument.moveDown(2);
+
+      pdfDocument
+        .fontSize(12)
+        .text(`Patient Name: ${appointment.patient.name}`);
+      pdfDocument.text(`Patient Email: ${appointment.patient.email}`);
+      pdfDocument.moveDown();
+
+      pdfDocument.fontSize(12).text(`Doctor Name: ${appointment.doctor.name}`);
+      pdfDocument.text(`Doctor Email: ${appointment.doctor.email}`);
+      pdfDocument.moveDown();
+
+      pdfDocument.text(
+        `Appointment Date: ${appointment.schedule.startDateTime.toDateString()}`,
+      );
+      pdfDocument.text(`Joining Time: ${joiningTime.toDateString()}`);
+      pdfDocument.text(`Serial Number: ${serialNumber}`);
+      pdfDocument.text(`Meeting Link: ${appointment.schedule.meetingLink}`);
+      pdfDocument.moveDown();
+
+      pdfDocument.text(`Paid Amount: ${executedPaymentResult.amount} BDT`);
+      pdfDocument.text("Payment Method: Bkash");
+      pdfDocument.text(`Transaction Id: ${executedPaymentResult.trxID}`);
+      pdfDocument.text(`Paid At: ${executedPaymentResult.paymentExecuteTime}`);
+
+      pdfDocument.end();
+
+      const pdfBuffer = await pdfReadyPromise;
+
       const templateFilePath = path.join(
         process.cwd(),
         "src/app/templates/appointment-confirmation.ejs",
@@ -346,6 +392,12 @@ const bookAppointmentCallback = async (query: Record<string, any>) => {
         from: config.email_sender,
         to: appointment.patient.email,
         subject: "Your Appointment is Confirmed - PH Healthcare",
+        attachments: [
+          {
+            filename: "invoice.pdf",
+            content: pdfBuffer,
+          },
+        ],
         html,
       });
 

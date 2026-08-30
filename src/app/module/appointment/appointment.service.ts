@@ -1,17 +1,100 @@
+import { isAfter, isBefore, isSameDay } from "date-fns";
 import {
   AppointmentStatus,
   PaymentStatus,
+  ScheduleStatus,
 } from "../../../generated/prisma/enums";
 import config from "../../config";
 import { getBKashIdToken } from "../../lib/bkash";
 import { prisma } from "../../lib/prisma";
 import type { RequestUser } from "../../middleware/checkAuth";
+import type { IBookAppointmentPayload } from "./appointment.interface";
 
-const bookAppointment = async (payload: any, user: RequestUser) => {
+const bookAppointment = async (
+  payload: IBookAppointmentPayload,
+  user: RequestUser,
+) => {
   const transactionResult = await prisma.$transaction(async (tx) => {
+    const patient = await prisma.patient.findUnique({
+      where: {
+        id: user.userId,
+      },
+    });
+
+    if (!patient) {
+      throw new Error("Patient not found");
+    }
+
+    const schedule = await prisma.schedule.findUnique({
+      where: { id: payload.scheduleId },
+      include: { doctor: true },
+    });
+
+    if (!schedule || schedule.isDeleted) {
+      throw new Error("schedule not found");
+    }
+
+    if (schedule.status !== ScheduleStatus.PUBLISHED) {
+      throw new Error("this schedule is not published yet");
+    }
+
+    const now = new Date();
+
+    if (!isSameDay(now, schedule.startDateTime)) {
+      throw new Error("This schedule is not available for today");
+    }
+
+    if (!isBefore(now, schedule.startDateTime)) {
+      throw new Error("This schedule has already started");
+    }
+
+    // if(isAfter(now, schedule.startDateTime)){
+    //   throw new Error("This schedule has already started")
+    // }
+
+    const existingAppointment = await prisma.appointment.findFirst({
+      where: {
+        patientId: patient.id,
+        scheduleId: schedule.id,
+      },
+    });
+
+    if (existingAppointment?.status === AppointmentStatus.PENDING) {
+      throw new Error(
+        "You already have a pending appointment. Please pay for that.",
+      );
+    }
+
+    if (existingAppointment?.status === AppointmentStatus.CONFIRMED) {
+      throw new Error("You already have a confirmed appointment.");
+    }
+
+    if (existingAppointment?.status === AppointmentStatus.ONGOING) {
+      throw new Error("You already have an ongoing appointment.");
+    }
+
+    if (existingAppointment?.status === AppointmentStatus.COMPLETED) {
+      throw new Error(
+        "You already completed an appointment on this schedule. Please try again another day.",
+      );
+    }
+
+    if (schedule.availableSlots === 0) {
+      throw new Error("This schedule is fully booked");
+    }
+
+    if (!schedule.doctor.consultationFee) {
+      throw new Error("This doctor has not set a consultation fee yet");
+    }
+
+    const amount = schedule.doctor.consultationFee.toString();
+
     const appointment = await tx.appointment.create({
       data: {
         status: AppointmentStatus.PENDING,
+        patientId: patient.id,
+        doctorId: schedule.doctor.id,
+        scheduleId: schedule.id,
       },
     });
 
@@ -37,7 +120,7 @@ const bookAppointment = async (payload: any, user: RequestUser) => {
           payerReference: user.email, // user email or phone
           callbackURL: `${config.bkash_callback_url}/appointment/book-appointment/payment/callback`,
           merchantAssociationInfo: "MI05MID54RF09123456One",
-          amount: "1200",
+          amount: amount,
           currency: "BDT",
           intent: "sale",
           merchantInvoiceNumber: appointment.id, //appointment id
@@ -52,7 +135,7 @@ const bookAppointment = async (payload: any, user: RequestUser) => {
       data: {
         merchantInvoiceNumber: bkashCreatePaymentResult.merchantInvoiceNumber,
         appointmentId: appointment.id,
-        amount: "1200",
+        amount: amount,
         gateWayResponse: bkashCreatePaymentResult,
         bkashPaymentId: bkashCreatePaymentResult.paymentID,
         payerReference: user.email,
@@ -74,6 +157,13 @@ const payAppointment = async (payload: any, user: RequestUser) => {
     where: {
       id: appointmentId,
     },
+    include: {
+      schedule: {
+        include: {
+          doctor: true,
+        },
+      },
+    },
   });
 
   if (!existingAppointment) {
@@ -83,6 +173,13 @@ const payAppointment = async (payload: any, user: RequestUser) => {
   if (existingAppointment.status !== "PENDING") {
     throw new Error("You can only pay for pending appointment");
   }
+
+  if (!existingAppointment.schedule.doctor.consultationFee) {
+    throw new Error("Doctor has not set consultation fee yet.");
+  }
+
+  const amount =
+    existingAppointment.schedule.doctor.consultationFee?.toString();
 
   const bkashIdToken = await getBKashIdToken();
 
@@ -106,7 +203,7 @@ const payAppointment = async (payload: any, user: RequestUser) => {
         payerReference: user.email, // user email or phone
         callbackURL: `${config.bkash_callback_url}/appointment/book-appointment/payment/callback`,
         merchantAssociationInfo: "MI05MID54RF09123456One",
-        amount: "1200",
+        amount: amount,
         currency: "BDT",
         intent: "sale",
         merchantInvoiceNumber: existingAppointment.id, //appointment id

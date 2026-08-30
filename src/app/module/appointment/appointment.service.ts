@@ -2,6 +2,7 @@ import { addMinutes, format, isBefore, isSameDay, subHours } from "date-fns";
 import {
   AppointmentStatus,
   PaymentStatus,
+  Role,
   ScheduleStatus,
 } from "../../../generated/prisma/enums";
 import config from "../../config";
@@ -815,6 +816,42 @@ const getAllAppointments = async (query: IQuery) => {
   };
 };
 
+// for all login users
+const getSingleAppointment = async (
+  appointmentId: string,
+  user: RequestUser,
+) => {
+  const appointment = await prisma.appointment.findUnique({
+    where: { id: appointmentId },
+    include: {
+      patient: { select: { id: true, name: true, email: true, userId: true } },
+      doctor: {
+        select: { id: true, name: true, specialization: true, userId: true },
+      },
+      schedule: true,
+      payment: true,
+    },
+  });
+
+  if (!appointment) {
+    throw new Error("Appointment Not Found");
+  }
+
+  if (user.role === Role.PATIENT) {
+    if (appointment.patient.userId !== user.userId) {
+      throw new Error("You Are Not Allowed To View This Appointment");
+    }
+  }
+
+  if (user.role === Role.DOCTOR) {
+    if (appointment.doctor.userId !== user.userId) {
+      throw new Error("You Are Not Allowed To View This Appointment");
+    }
+  }
+
+  return appointment;
+};
+
 export const AppointmentService = {
   bookAppointment,
   payAppointment,
@@ -824,4 +861,5 @@ export const AppointmentService = {
   getMyAppointments,
   getDoctorAppointments,
   getAllAppointments,
+  getSingleAppointment,
 };

@@ -8,7 +8,12 @@ import config from "../../config";
 import { getBKashIdToken } from "../../lib/bkash";
 import { prisma } from "../../lib/prisma";
 import type { RequestUser } from "../../middleware/checkAuth";
-import type { IBookAppointmentPayload } from "./appointment.interface";
+import type {
+  IBookAppointmentPayload,
+  ICancelAppointmentPayload,
+  IPayAppointmentPayload,
+  IUpdateAppointmentStatusPayload,
+} from "./appointment.interface";
 import { transporter } from "../../lib/nodemailer";
 import path from "path";
 import ejs from "ejs";
@@ -154,7 +159,10 @@ const bookAppointment = async (
   return transactionResult;
 };
 
-const payAppointment = async (payload: any, user: RequestUser) => {
+const payAppointment = async (
+  payload: IPayAppointmentPayload,
+  user: RequestUser,
+) => {
   const appointmentId = payload.appointmentId;
 
   const existingAppointment = await prisma.appointment.findUnique({
@@ -443,7 +451,10 @@ const bookAppointmentCallback = async (query: Record<string, any>) => {
   return transactionResult;
 };
 
-const cancelAppointment = async (payload: any, user: RequestUser) => {
+const cancelAppointment = async (
+  payload: ICancelAppointmentPayload,
+  user: RequestUser,
+) => {
   const transactionResult = await prisma.$transaction(async (tx) => {
     const appointmentId = payload.appointmentId;
 
@@ -559,9 +570,79 @@ const cancelAppointment = async (payload: any, user: RequestUser) => {
   return transactionResult;
 };
 
+const updateAppointmentStatus = async (
+  appointmentId: string,
+  payload: IUpdateAppointmentStatusPayload,
+  user: RequestUser,
+) => {
+  const doctor = await prisma.doctor.findUnique({
+    where: { userId: user.userId },
+  });
+
+  if (!doctor) {
+    throw new Error("Doctor Profile Not Found");
+  }
+
+  const appointment = await prisma.appointment.findUnique({
+    where: {
+      id: appointmentId,
+      doctorId: doctor.id,
+    },
+  });
+
+  if (!appointment) {
+    throw new Error("Appointment Not Found");
+  }
+
+  if (appointment.status === AppointmentStatus.COMPLETED) {
+    throw new Error("Appointment is already completed");
+  }
+
+  if (appointment.status === AppointmentStatus.CANCELLED) {
+    throw new Error("Appointment is cancelled");
+  }
+
+  if (appointment.status === AppointmentStatus.PENDING) {
+    throw new Error(
+      "Appointment is Pending. You can change the status after appointment is confirmed",
+    );
+  }
+
+  if (appointment.status === AppointmentStatus.CONFIRMED) {
+    if (payload.status !== "ONGOING") {
+      throw new Error("Confirmed Appointment Must Be Ongoing At First");
+    }
+
+    await prisma.appointment.update({
+      where: {
+        id: appointment.id,
+      },
+      data: {
+        status: AppointmentStatus.ONGOING,
+      },
+    });
+  }
+
+  if (appointment.status === AppointmentStatus.ONGOING) {
+    if (payload.status !== "COMPLETED") {
+      throw new Error("Ongoing Appointment Must Be Completed.");
+    }
+
+    await prisma.appointment.update({
+      where: {
+        id: appointment.id,
+      },
+      data: {
+        status: AppointmentStatus.COMPLETED,
+      },
+    });
+  }
+};
+
 export const AppointmentService = {
   bookAppointment,
   payAppointment,
   bookAppointmentCallback,
   cancelAppointment,
+  updateAppointmentStatus,
 };

@@ -641,7 +641,8 @@ const updateAppointmentStatus = async (
   }
 };
 
-const getMyAppointment = async (query: IQuery, user: RequestUser) => {
+// patient
+const getMyAppointments = async (query: IQuery, user: RequestUser) => {
   const limit = query.limit ? Number(query.limit) : 10;
   const page = query.page ? Number(query.page) : 1;
   const skip = (page - 1) * limit;
@@ -693,11 +694,93 @@ const getMyAppointment = async (query: IQuery, user: RequestUser) => {
   };
 };
 
+// doctor
+const getDoctorAppointments = async (query: IQuery, user: RequestUser) => {
+  const limit = query.limit ? Number(query.limit) : 10;
+  const page = query.page ? Number(query.page) : 1;
+  const skip = (page - 1) * limit;
+  const sortBy = query.sortBy ? query.sortBy : "createdAt";
+  const sortOrder = query.sortOrder ? query.sortOrder : "desc";
+
+  const doctor = await prisma.doctor.findUnique({
+    where: { userId: user.userId },
+  });
+
+  if (!doctor) {
+    throw new Error("Doctor Profile Not Found");
+  }
+
+  const andConditions: AppointmentWhereInput[] = [
+    {
+      doctorId: doctor.id,
+    },
+  ];
+
+  if (query.status) {
+    andConditions.push({ status: query.status });
+  }
+
+  const appointments = await prisma.appointment.findMany({
+    where: { AND: andConditions },
+    take: limit,
+    skip,
+    orderBy: { [sortBy]: sortOrder },
+    include: {
+      patient: {
+        select: { id: true, name: true, email: true, contactNumber: true },
+      },
+      schedule: true,
+      payment: true,
+    },
+  });
+
+  const total = await prisma.appointment.count({
+    where: { AND: andConditions },
+  });
+
+  return {
+    data: appointments,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
+// admin
+const getAllAppointments = async (query: IQuery) => {
+  const limit = query.limit ? Number(query.limit) : 10;
+  const page = query.page ? Number(query.page) : 1;
+  const skip = (page - 1) * limit;
+  const sortBy = query.sortBy ? query.sortBy : "createdAt";
+  const sortOrder = query.sortOrder ? query.sortOrder : "desc";
+
+  const andConditions: AppointmentWhereInput[] = [];
+
+  if (query.status) {
+		andConditions.push({ status: query.status });
+	}
+
+	if (query.doctorId) {
+		andConditions.push({ doctorId: query.doctorId });
+	}
+
+	if (query.patientId) {
+		andConditions.push({ patientId: query.patientId });
+	}
+
+  
+};
+
 export const AppointmentService = {
   bookAppointment,
   payAppointment,
   bookAppointmentCallback,
   cancelAppointment,
   updateAppointmentStatus,
-  getMyAppointment,
+  getMyAppointments,
+  getDoctorAppointments,
+  getAllAppointments,
 };

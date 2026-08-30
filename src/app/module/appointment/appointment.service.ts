@@ -760,18 +760,59 @@ const getAllAppointments = async (query: IQuery) => {
   const andConditions: AppointmentWhereInput[] = [];
 
   if (query.status) {
-		andConditions.push({ status: query.status });
-	}
+    andConditions.push({ status: query.status });
+  }
 
-	if (query.doctorId) {
-		andConditions.push({ doctorId: query.doctorId });
-	}
+  if (query.doctorId) {
+    andConditions.push({ doctorId: query.doctorId });
+  }
 
-	if (query.patientId) {
-		andConditions.push({ patientId: query.patientId });
-	}
+  if (query.patientId) {
+    andConditions.push({ patientId: query.patientId });
+  }
 
-  
+  if (query.doctorEmail) {
+    andConditions.push({
+      doctor: {
+        email: query.doctorEmail,
+      },
+    });
+  }
+
+  if (query.patientEmail) {
+    andConditions.push({
+      patient: {
+        email: query.patientEmail,
+      },
+    });
+  }
+
+  const appointments = await prisma.appointment.findMany({
+    where: { AND: andConditions },
+    take: limit,
+    skip,
+    orderBy: { [sortBy]: sortOrder },
+    include: {
+      patient: { select: { id: true, name: true, email: true } },
+      doctor: { select: { id: true, name: true, specialization: true } },
+      schedule: true,
+      payment: true,
+    },
+  });
+
+  const total = await prisma.appointment.count({
+    where: { AND: andConditions },
+  });
+
+  return {
+    data: appointments,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 };
 
 export const AppointmentService = {

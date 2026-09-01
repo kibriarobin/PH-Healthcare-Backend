@@ -94,10 +94,25 @@ const updateDoctorProfile = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getAvailableDoctorByTodaysSchedule = catchAsync(
+  async (req: Request, res: Response) => {
+    const { data, meta } =
+      await DoctorService.getAvailableDoctorByTodaysSchedule(req.query);
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Today's Available Doctors Retrieved Successfully",
+      data,
+      meta,
+    });
+  },
+);
+
 export const DoctorController = {
   applyDoctor,
   verifyDoctorEmail,
   approveDoctor,
   getAllDoctors,
   updateDoctorProfile,
+  getAvailableDoctorByTodaysSchedule,
 };

@@ -38,4 +38,10 @@ router.patch(
   DoctorController.updateDoctorProfile,
 );
 
+
+router.get(
+	"/public/available-today",
+	DoctorController.getAvailableDoctorByTodaysSchedule,
+);
+
 export const DoctorRoutes = router;

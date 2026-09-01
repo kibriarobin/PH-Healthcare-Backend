@@ -2,12 +2,12 @@ import type { Request, Response } from "express";
 import httpStatus from "http-status";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
-import { paymentService } from "./payment.route";
+import { PaymentService } from "./payment.service";
 
 const getMyPayments = catchAsync(async (req: Request, res: Response) => {
   const user = req.user!;
 
-  const { data, meta } = await paymentService.getMyPayments(req.query, user);
+  const { data, meta } = await PaymentService.getMyPayments(req.query, user);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -18,7 +18,7 @@ const getMyPayments = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllPayments = catchAsync(async (req: Request, res: Response) => {
-  const { data, meta } = await paymentService.getAllPayments(req.query);
+  const { data, meta } = await PaymentService.getAllPayments(req.query);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -32,7 +32,7 @@ const getSinglePayment = catchAsync(async (req: Request, res: Response) => {
   const paymentId = req.params.paymentId as string;
   const user = req.user!;
 
-  const result = await paymentService.getSinglePayment(paymentId, user);
+  const result = await PaymentService.getSinglePayment(paymentId, user);
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,

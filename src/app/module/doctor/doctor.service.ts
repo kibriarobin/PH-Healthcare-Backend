@@ -485,6 +485,74 @@ const getAvailableDoctorByTodaysSchedule = async (query: IQuery) => {
   };
 };
 
+const getAllDoctorsListPublic = async (query: IQuery) => {
+  const limit = query.limit ? Number(query.limit) : 10;
+  const page = query.page ? Number(query.page) : 1;
+  const skip = (page - 1) * limit;
+  const sortBy = query.sortBy ? query.sortBy : "createdAt";
+  const sortOrder = query.sortOrder ? query.sortOrder : "desc";
+
+  const andConditions: DoctorWhereInput[] = [
+    { isDeleted: false },
+    { verificationStatus: DoctorVerificationStatus.APPROVED },
+  ];
+
+  if (query.searchTerm) {
+    andConditions.push({
+      OR: [
+        { name: { contains: query.searchTerm, mode: "insensitive" } },
+        { specialization: { contains: query.searchTerm, mode: "insensitive" } },
+        { qualifications: { contains: query.searchTerm, mode: "insensitive" } },
+      ],
+    });
+  }
+
+  if (query.specialization) {
+    andConditions.push({
+      specialization: { equals: query.specialization, mode: "insensitive" },
+    });
+  }
+
+  const allDoctors = await prisma.doctor.findMany({
+    where: {
+      AND: andConditions,
+    },
+
+    take: limit,
+    skip,
+
+    orderBy: {
+      [sortBy]: sortOrder,
+    },
+
+    select: {
+      id: true,
+      name: true,
+      specialization: true,
+      licenseNumber: true,
+      qualifications: true,
+      experienceYears: true,
+      bio: true,
+      consultationFee: true,
+      createdAt: true,
+    },
+  });
+
+  const totalDoctorCount = await prisma.doctor.count({
+    where: { AND: andConditions },
+  });
+
+  return {
+    data: allDoctors,
+    meta: {
+      page,
+      limit,
+      total: totalDoctorCount,
+      totalPages: Math.ceil(totalDoctorCount / limit),
+    },
+  };
+};
+
 export const DoctorService = {
   applyDoctor,
   verifyDoctorEmail,
@@ -492,4 +560,5 @@ export const DoctorService = {
   getAllDoctors,
   updateDoctorProfile,
   getAvailableDoctorByTodaysSchedule,
+  getAllDoctorsListPublic,
 };

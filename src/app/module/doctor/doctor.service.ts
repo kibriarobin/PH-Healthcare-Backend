@@ -12,6 +12,7 @@ import ejs from "ejs";
 import type {
   IApplyAsDoctorPayload,
   IApproveDoctorPayload,
+  IUpdateDoctorProfilePayload,
   IVerifyDoctorEmailPayload,
 } from "./doctor.interface";
 import { Role } from "../../../generated/prisma/enums";
@@ -353,7 +354,26 @@ const getAllDoctors = async (query: IQuery) => {
       totalPages: Math.ceil(totalDoctorCount / limit),
     },
   };
-  
+};
+
+const updateDoctorProfile = async (
+  payload: IUpdateDoctorProfilePayload,
+  user: RequestUser,
+) => {
+  const existingDoctor = await prisma.doctor.findUnique({
+    where: { userId: user.userId },
+  });
+
+  if (!existingDoctor) {
+    throw new Error("Doctor Profile Not Found");
+  }
+
+  const updatedDoctor = await prisma.doctor.update({
+    where: { id: existingDoctor.id },
+    data: payload,
+  });
+
+  return updatedDoctor;
 };
 
 export const DoctorService = {
@@ -361,4 +381,5 @@ export const DoctorService = {
   verifyDoctorEmail,
   approveDoctor,
   getAllDoctors,
+  updateDoctorProfile,
 };

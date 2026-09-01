@@ -123,6 +123,23 @@ const getAllDoctorsListPublic = catchAsync(
   },
 );
 
+const getSingleDoctorPublicProfile = catchAsync(
+	async (req: Request, res: Response) => {
+
+		const doctorId = req.params.doctorId as string
+		
+		const result = await DoctorService.getSingleDoctorPublicProfile(
+			doctorId
+		);
+		sendResponse(res, {
+			statusCode: httpStatus.OK,
+			success: true,
+			message: "Doctor Profile Retrieved Successfully",
+			data: result,
+		});
+	},
+);
+
 export const DoctorController = {
   applyDoctor,
   verifyDoctorEmail,
@@ -131,4 +148,5 @@ export const DoctorController = {
   updateDoctorProfile,
   getAvailableDoctorByTodaysSchedule,
   getAllDoctorsListPublic,
+  getSingleDoctorPublicProfile,
 };

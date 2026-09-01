@@ -45,5 +45,6 @@ router.get(
 
 router.get("/public/all-doctors", DoctorController.getAllDoctorsListPublic);
 
+router.get("/public/:doctorId", DoctorController.getSingleDoctorPublicProfile);
 
 export const DoctorRoutes = router;

@@ -553,6 +553,33 @@ const getAllDoctorsListPublic = async (query: IQuery) => {
   };
 };
 
+const getSingleDoctorPublicProfile = async (doctorId: string) => {
+  const doctor = await prisma.doctor.findUnique({
+    where: {
+      id: doctorId,
+      isDeleted: false,
+      verificationStatus: DoctorVerificationStatus.APPROVED,
+    },
+    select: {
+      id: true,
+      name: true,
+      specialization: true,
+      licenseNumber: true,
+      qualifications: true,
+      experienceYears: true,
+      bio: true,
+      consultationFee: true,
+      createdAt: true,
+    },
+  });
+
+  if (!doctor) {
+    throw new Error("Doctor not found");
+  }
+
+  return doctor;
+};
+
 export const DoctorService = {
   applyDoctor,
   verifyDoctorEmail,
@@ -561,4 +588,5 @@ export const DoctorService = {
   updateDoctorProfile,
   getAvailableDoctorByTodaysSchedule,
   getAllDoctorsListPublic,
+  getSingleDoctorPublicProfile,
 };

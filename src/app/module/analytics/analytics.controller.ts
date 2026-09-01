@@ -1,8 +1,8 @@
 import httpStatus from "http-status";
 import { sendResponse } from "../../utils/sendResponse";
-import { AnalyticsService } from "./analytics.route";
 import { catchAsync } from "../../utils/catchAsync";
 import type { Request, Response } from "express";
+import { AnalyticsService } from "./analytics.service";
 
 const getAdminAnalytics = catchAsync(async (req: Request, res: Response) => {
   const result = await AnalyticsService.getAdminAnalytics();

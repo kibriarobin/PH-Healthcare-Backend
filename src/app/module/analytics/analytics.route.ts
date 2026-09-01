@@ -1,178 +1,26 @@
-import {
-  AppointmentStatus,
-  DoctorVerificationStatus,
-  PaymentStatus,
-  ScheduleStatus,
-} from "../../../generated/prisma/enums";
-import { prisma } from "../../lib/prisma";
-import type { RequestUser } from "../../middleware/checkAuth";
+import { Router } from "express";
+import { Role } from "../../../generated/prisma/enums";
+import { AnalyticsController } from "./analytics.controller";
+import { auth } from "../../middleware/checkAuth";
 
-const getAdminAnalytics = async () => {
-  const totalDoctors = await prisma.doctor.count({
-    where: {
-      isDeleted: false,
-    },
-  });
+const router = Router();
 
-  const totalPendingDoctorApplications = await prisma.doctor.count({
-    where: {
-      isDeleted: false,
-      verificationStatus: DoctorVerificationStatus.PENDING,
-    },
-  });
+router.get(
+  "/admin-analytics",
+  auth(Role.ADMIN, Role.SUPER_ADMIN),
+  AnalyticsController.getAdminAnalytics,
+);
 
-  const totalApprovedDoctors = await prisma.doctor.count({
-    where: {
-      isDeleted: false,
-      verificationStatus: DoctorVerificationStatus.APPROVED,
-    },
-  });
+router.get(
+  "/patient-analytics",
+  auth(Role.PATIENT),
+  AnalyticsController.getPatientAnalytics,
+);
 
-  const totalRejectedDoctors = await prisma.doctor.count({
-    where: {
-      isDeleted: false,
-      verificationStatus: DoctorVerificationStatus.REJECTED,
-    },
-  });
+router.get(
+  "/doctor-analytics",
+  auth(Role.DOCTOR),
+  AnalyticsController.getDoctorAnalytics,
+);
 
-  const totalPatients = await prisma.patient.count({
-    where: { isDeleted: false },
-  });
-
-  const totalAppointments = await prisma.appointment.count();
-
-  const totalCompletedAppointments = await prisma.appointment.count({
-    where: { status: AppointmentStatus.COMPLETED },
-  });
-
-  const totalCancelledAppointments = await prisma.appointment.count({
-    where: { status: AppointmentStatus.CANCELLED },
-  });
-
-  const totalRefundResult = await prisma.payment.aggregate({
-    where: {
-      status: PaymentStatus.PAID,
-    },
-    _sum: {
-      amount: true,
-    },
-  });
-
-  const totalRefunded = totalRefundResult._sum.amount?.toNumber() || 0;
-
-  const totalRevenueResult = await prisma.payment.aggregate({
-    where: {
-      status: PaymentStatus.PAID,
-    },
-    _sum: {
-      amount: true,
-    },
-  });
-
-  const totalRevenue =
-    (totalRevenueResult._sum.amount?.toNumber() || 0) - totalRefunded;
-
-  return {
-    totalDoctors,
-    totalPendingDoctorApplications,
-    totalApprovedDoctors,
-    totalRejectedDoctors,
-    totalPatients,
-    totalAppointments,
-    totalCompletedAppointments,
-    totalCancelledAppointments,
-    totalRevenue,
-    totalRefunded,
-  };
-};
-
-const getPatientAnalytics = async (user: RequestUser) => {
-  const patient = await prisma.patient.findUnique({
-    where: { userId: user.userId },
-  });
-
-  if (!patient) {
-    throw new Error("Patient Profile Not Found");
-  }
-
-  const totalAppointments = await prisma.appointment.count({
-    where: { patientId: patient.id },
-  });
-
-  const upcomingAppointments = await prisma.appointment.count({
-    where: { patientId: patient.id, status: AppointmentStatus.CONFIRMED },
-  });
-
-  const completedAppointments = await prisma.appointment.count({
-    where: { patientId: patient.id, status: AppointmentStatus.COMPLETED },
-  });
-
-  const cancelledAppointments = await prisma.appointment.count({
-    where: { patientId: patient.id, status: AppointmentStatus.CANCELLED },
-  });
-
-  return {
-    totalAppointments,
-    upcomingAppointments,
-    completedAppointments,
-    cancelledAppointments,
-  };
-};
-
-const getDoctorAnalytics = async (user: RequestUser) => {
-  const doctor = await prisma.doctor.findUnique({
-    where: { userId: user.userId },
-  });
-
-  if (!doctor) {
-    throw new Error("Doctor Profile Not Found");
-  }
-
-  const totalSchedules = await prisma.schedule.count({
-    where: { doctorId: doctor.id, isDeleted: false },
-  });
-
-  const publishedSchedules = await prisma.schedule.count({
-    where: {
-      doctorId: doctor.id,
-      isDeleted: false,
-      status: ScheduleStatus.PUBLISHED,
-    },
-  });
-
-  const totalAppointments = await prisma.appointment.count({
-    where: { doctorId: doctor.id },
-  });
-
-  const upcomingAppointments = await prisma.appointment.count({
-    where: { doctorId: doctor.id, status: AppointmentStatus.CONFIRMED },
-  });
-
-  const ongoingAppointments = await prisma.appointment.count({
-    where: { doctorId: doctor.id, status: AppointmentStatus.ONGOING },
-  });
-
-  const completedAppointments = await prisma.appointment.count({
-    where: { doctorId: doctor.id, status: AppointmentStatus.COMPLETED },
-  });
-
-  const cancelledAppointments = await prisma.appointment.count({
-    where: { doctorId: doctor.id, status: AppointmentStatus.CANCELLED },
-  });
-
-  return {
-    totalSchedules,
-    publishedSchedules,
-    totalAppointments,
-    upcomingAppointments,
-    ongoingAppointments,
-    completedAppointments,
-    cancelledAppointments,
-  };
-};
-
-export const AnalyticsService = {
-  getAdminAnalytics,
-  getPatientAnalytics,
-  getDoctorAnalytics,
-};
+export const AnalyticsRoutes = router;
